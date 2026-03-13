@@ -603,7 +603,7 @@ function makePinSVG(status) {
     online:  { fill:'#10b21b', halo:'rgba(16,178,27,0.22)'  },
     offline: { fill:'#a855f7', halo:'rgba(168,85,247,0.22)' },
   }[status];
-  return `<svg viewBox="0 0 83.92 83.92" xmlns="http://www.w3.org/2000/svg" width="26" height="26" style="display:block">
+  return `<svg viewBox="0 0 83.92 83.92" xmlns="http://www.w3.org/2000/svg" width="20" height="20" style="display:block">
     <circle cx="41.96" cy="41.96" r="40.34" fill="${c.halo}"/>
     <circle cx="41.96" cy="41.96" r="20.58" fill="${c.fill}"/>
     <path fill="${c.fill}" d="M41.96,83.92C18.82,83.92,0,65.09,0,41.96S18.82,0,41.96,0s41.96,18.82,41.96,41.96-18.82,41.96-41.96,41.96ZM41.96,3.23C20.6,3.23,3.23,20.6,3.23,41.96s17.37,38.73,38.73,38.73,38.73-17.37,38.73-38.73S63.31,3.23,41.96,3.23Z"/>
@@ -612,20 +612,20 @@ function makePinSVG(status) {
 
 function createIcon(status) {
   const ring = (status === 'alarm' || status === 'warning')
-    ? `<div style="position:absolute;top:0;left:0;width:26px;height:26px;border-radius:50%;
+    ? `<div style="position:absolute;top:0;left:0;width:20px;height:20px;border-radius:50%;
         border:2.5px solid ${status==='alarm'?'#ff3b3b':'#ff8c00'};
         background:${status==='alarm'?'rgba(255,59,59,0.20)':'rgba(255,140,0,0.20)'};
         animation:pulse-ring ${status==='alarm'?'1.2':'1.8'}s ease-out infinite;"></div>` : '';
   return L.divIcon({
     className: '',
-    iconSize:  [26, 26], iconAnchor: [13, 13],
-    html: `<div style="position:relative;width:26px;height:26px;cursor:pointer">${ring}${makePinSVG(status)}</div>`,
+    iconSize:  [20, 20], iconAnchor: [10, 10],
+    html: `<div style="position:relative;width:20px;height:20px;cursor:pointer;transition:transform 0.15s ease;">${ring}${makePinSVG(status)}</div>`,
   });
 }
 
 /* Pulse keyframes */
 const s = document.createElement('style');
-s.textContent = `@keyframes pulse-ring{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.6);opacity:0}}`;
+s.textContent = `@keyframes pulse-ring{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.6);opacity:0}} .leaflet-marker-icon:hover > div { transform: scale(1.3) !important; }`;
 document.head.appendChild(s);
 
 /* ── BUILD MARKERS ── */
