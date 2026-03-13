@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IoT Dashboard Map</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+:root {
+  --alarm:   #ff3b3b;
+  --warning: #ff8c00;
+  --online:  #10b21b;
+  --offline: #a855f7;
+
+  /* Light mode tokens */
+  --bg-panel:      rgba(255,255,255,0.55);
+  --bg-panel-bold: rgba(255,255,255,0.72);
+  --border-panel:  rgba(255,255,255,0.6);
+  --border-sep:    rgba(200,210,225,0.5);
+  --text-primary:  #1a1f2e;
+  --text-secondary:#6b7280;
+  --text-ctrl:     #4b5563;
+  --text-legend:   #374151;
+  --text-mono:     #1a1f2e;
+  --hover-bg:      rgba(255,255,255,0.6);
+  --hover-bg2:     rgba(0,0,0,0.05);
+  --active-bg:     rgba(0,0,0,0.06);
+  --sep-color:     #e5e7eb;
+  --zoom-label:    #9ca3af;
+  --shadow:        rgba(80,100,140,0.13);
+}
+
+/* ── LEGEND SECTION ACCORDIONS ── */
+[
+  ['sectionDeviceHeader', 'sectionDeviceBody'],
+  ['sectionZoneHeader',   'sectionZoneBody'],
+].forEach(([hId, bId]) => {
+  const hdr  = document.getElementById(hId);
+  const body = document.getElementById(bId);
+  hdr.addEventListener('click', () => {
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    hdr.classList.toggle('open', !isOpen);
+  });
+});
+
+/* ── ZONE TOGGLES ── */
+function setupZoneToggle(btnId, layer, visRef, setVis) {
+  const btn = document.getElementById(btnId);
+  btn.addEventListener('click', () => {
+    const newVis = !setVis.val;
+    setVis.val = newVis;
+    if (newVis) layer.addTo(map); else map.removeLayer(layer);
+    btn.style.opacity = newVis ? '1' : '0.38';
+  });
+}
+const z1vis = { val: true }, z2vis = { val: true };
+setupZoneToggle('toggleZone1', zone1Layer, z1vis, z1vis);
+setupZoneToggle('toggleZone2', zone2Layer, z2vis, z2vis);
+
+/* ── DARK MODE ── */
+body.dark {
+  --bg-panel:      rgba(18,24,32,0.85);
+  --bg-panel-bold: rgba(18,24,32,0.92);
+  --border-panel:  rgba(255,255,255,0.08);
+  --border-sep:    rgba(255,255,255,0.08);
+  --text-primary:  #e6edf3;
+  --text-secondary:#8b97a8;
+  --text-ctrl:     #aab4c0;
+  --text-legend:   #c9d1db;
+  --text-mono:     #e6edf3;
+  --hover-bg:      rgba(255,255,255,0.08);
+  --hover-bg2:     rgba(255,255,255,0.06);
+  --active-bg:     rgba(255,255,255,0.10);
+  --sep-color:     rgba(255,255,255,0.10);
+  --zoom-label:    #6b7280;
+  --shadow:        rgba(0,0,0,0.4);
+}
+
+/* Map filter in dark mode */
+
+
+/* ── DARK MODE: glass panels + all text light ── */
+body.dark .topbar {
+  background: rgba(6,9,16,0.72);
+  border-bottom: 1px solid rgba(255,255,255,0.11);
+  backdrop-filter: blur(28px) saturate(1.8) brightness(1.05);
+  box-shadow: 0 1px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07);
+}
+body.dark .zoom-controls,
+body.dark .map-controls-right {
+  background: rgba(6,9,16,0.68);
+  border-color: rgba(255,255,255,0.11);
+  backdrop-filter: blur(24px) saturate(1.8) brightness(1.05);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.07);
+}
+body.dark .legend {
+  background: rgba(6,9,16,0.72);
+  border-color: rgba(255,255,255,0.11);
+  backdrop-filter: blur(24px) saturate(1.8) brightness(1.05);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.07);
+}
+body.dark .zoom-sep,
+body.dark .ctrl-sep { background: rgba(255,255,255,0.09); }
+body.dark .tooltip-inner {
+  background: rgba(6,9,16,0.76);
+  border-color: rgba(255,255,255,0.11);
+  backdrop-filter: blur(28px) saturate(1.8) brightness(1.05);
+  box-shadow: 0 8px 36px rgba(0,0,0,0.60), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+body.dark .tt-header { border-bottom-color: rgba(255,255,255,0.09); }
+
+/* All text → light in dark mode */
+body.dark .topbar-title,
+body.dark .stat-count,
+body.dark .tt-id,
+body.dark .tt-val,
+body.dark .legend-item { color: #e8edf4; }
+body.dark .stat-label,
+body.dark .tt-date,
+body.dark .legend-title,
+body.dark .zoom-level { color: #7a8898; }
+body.dark .tt-key { color: #9aaab8; }
+body.dark .zoom-btn,
+body.dark .ctrl-btn { color: #9aaab8; }
+body.dark .zoom-btn:hover,
+body.dark .ctrl-btn:hover { background: rgba(255,255,255,0.09); color: #e8edf4; }
+
+/* Dark mode: badge solid backgrounds for legibility */
+body.dark .badge-alarm   { background:#ff3b3b; color:#fff; border-color:#ff3b3b; }
+body.dark .badge-warning { background:#f1e4d4; color:#7a3800; border-color:#e8c89a; }
+body.dark .badge-online  { background:#d9e7d5; color:#1a5c1f; border-color:#9ccb94; }
+body.dark .badge-offline { background:#e9dae8; color:#5b1a7a; border-color:#c49bc2; }
+body.dark .badge-gas-low { background:#fde8e8; color:#b91c1c; border-color:rgba(185,28,28,0.4); }
+body.dark .badge-gas-mid { background:#fca5a5; color:#7f1d1d; border-color:rgba(127,29,29,0.5); }
+body.dark .badge-gas-hi  { background:#ef4444; color:#fff;    border-color:#dc2626; }
+body.dark .badge-sys     { background:#ffedd5; color:#9a3412; border-color:#fdba74; }
+body.dark .badge-battery { background:#fef3c7; color:#92400e; border-color:#fcd34d; }
+body.dark .badge-eol     { background:#dbeafe; color:#1e3a5f; border-color:#93c5fd; }
+body.dark .badge-env     { background:#cffafe; color:#0e7490; border-color:#67e8f9; }
+
+/* Dark mode: colored left border on tooltip — outline style */
+body.dark .tooltip-inner[data-status="alarm"]   { border-left: 4px solid #ff3b3b; box-shadow: inset 3px 0 12px rgba(255,59,59,0.15), 0 8px 36px rgba(0,0,0,0.60); }
+body.dark .tooltip-inner[data-status="warning"] { border-left: 4px solid #ff8c00; box-shadow: inset 3px 0 12px rgba(255,140,0,0.15), 0 8px 36px rgba(0,0,0,0.60); }
+body.dark .tooltip-inner[data-status="online"]  { border-left: 4px solid #10b21b; box-shadow: inset 3px 0 12px rgba(16,178,27,0.15), 0 8px 36px rgba(0,0,0,0.60); }
+body.dark .tooltip-inner[data-status="offline"] { border-left: 4px solid #a855f7; box-shadow: inset 3px 0 12px rgba(168,85,247,0.15), 0 8px 36px rgba(0,0,0,0.60); }
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: 'Roboto', sans-serif; color: #e6edf3; user-select: none; }
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-panel);
+  padding: 10px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  backdrop-filter: blur(20px) saturate(1.6);
+  box-shadow: 0 1px 10px var(--shadow);
+}
+.topbar-title {
+  font-family: 'Roboto Mono', monospace; font-size: 13px; font-weight: 600;
+  letter-spacing: 0.08em; color: var(--text-primary);
+  display: flex; align-items: flex-start; gap: 10px;
+  flex: 1 1 auto; min-width: 0;
+}
+.topbar-title::before {
+  content:''; width:8px; height:8px; flex-shrink:0; margin-top:3px;
+  background:var(--online); border-radius:50%;
+  box-shadow: 0 0 8px var(--online); animation: blink 2s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.topbar-stats {
+  display: flex; gap: 16px;
+  font-family: 'Roboto Mono', monospace; font-size: 11px;
+  flex-shrink: 0;
+}
+.stat { display:flex; align-items:center; gap:6px; white-space:nowrap; }
+.stat-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.stat-count { font-weight:600; color:var(--text-primary); }
+.stat-label { color:var(--text-secondary); }
+
+@media (max-width: 780px) {
+  .topbar { align-items: flex-start; padding: 8px 16px; }
+  .topbar-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
+}
+@media (max-width: 780px) {
+  .zoom-controls, .map-controls-right { top: 90px; }
+}
+@media (max-width: 480px) {
+  .topbar-stats { grid-template-columns: 1fr; gap: 3px; }
+  .zoom-controls, .map-controls-right { top: 120px; }
+}
+
+/* ── MAP ── */
+#map { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; }
+body.dark .leaflet-tile-pane {
+  filter: brightness(0.45) saturate(0.7) contrast(1.1);
+}
+
+
+
+/* ── ZOOM controls ── */
+.zoom-controls {
+  position: fixed; top: 60px; left: 16px; z-index: 400;
+  display: flex; flex-direction: column; gap: 2px;
+  background: rgba(255,255,255,0.38); border: 1px solid rgba(255,255,255,0.55);
+  border-radius: 8px; overflow: hidden;
+  backdrop-filter: blur(18px) saturate(1.5);
+  box-shadow: 0 2px 12px var(--shadow);
+}
+.zoom-btn {
+  width: 36px; height: 36px; background: transparent; border: none;
+  color: var(--text-ctrl); font-size: 20px; font-weight: 300; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.zoom-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
+.zoom-sep { height: 1px; background: var(--sep-color); }
+.zoom-level {
+  font-family: 'Roboto Mono', monospace; font-size: 9px; color: var(--zoom-label);
+  text-align: center; padding: 3px 0; letter-spacing: 0.05em;
+}
+
+/* ── Right controls ── */
+.map-controls-right {
+  position: fixed; top: 60px; right: 16px; z-index: 400;
+  display: flex; flex-direction: column; gap: 2px;
+  background: rgba(255,255,255,0.38); border: 1px solid rgba(255,255,255,0.55);
+  border-radius: 8px; overflow: visible;
+  backdrop-filter: blur(18px) saturate(1.5);
+  box-shadow: 0 2px 12px var(--shadow);
+}
+.ctrl-btn {
+  width: 36px; height: 36px; background: transparent; border: none;
+  color: var(--text-ctrl); cursor: pointer; display: flex; align-items: center;
+  justify-content: center; transition: background 0.12s, color 0.12s; position: relative;
+}
+.ctrl-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
+.ctrl-btn svg { width: 16px; height: 16px; display: block; }
+.ctrl-sep { height: 1px; background: var(--border-sep); }
+.ctrl-btn .ctrl-tip {
+  position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%);
+  background: rgba(30,35,45,0.88); color: #fff; font-size: 11px; font-weight: 500;
+  white-space: nowrap; padding: 4px 9px; border-radius: 6px;
+  pointer-events: none; opacity: 0; transition: opacity 0.15s ease;
+}
+.ctrl-btn:hover .ctrl-tip { opacity: 1; }
+
+/* ── TOOLTIP ── */
+.tooltip {
+  position: fixed; z-index: 999; pointer-events: none; visibility: hidden;
+  transform: translateY(6px) scale(0.97); min-width: 250px;
+  transition: transform 0.15s ease, visibility 0s linear 0.15s;
+}
+.tooltip.visible { visibility: visible; transform: translateY(0) scale(1); transition: transform 0.15s ease; }
+.tooltip-inner {
+  background: var(--bg-panel); border: 1px solid var(--border-panel);
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 4px 24px var(--shadow);
+  backdrop-filter: blur(20px) saturate(1.6);
+}
+.tooltip-inner[data-status="alarm"]   { border-left: 4px solid var(--alarm); }
+.tooltip-inner[data-status="warning"] { border-left: 4px solid var(--warning); }
+.tooltip-inner[data-status="online"]  { border-left: 4px solid var(--online); }
+.tooltip-inner[data-status="offline"] { border-left: 4px solid var(--offline); }
+.tt-header { padding:10px 14px 8px; border-bottom:1px solid var(--border-sep); }
+.tt-id   { font-family:'Roboto Mono',monospace; font-size:10.5px; font-weight:600; color:#1a1f2e; word-break:break-all; line-height:1.4; }
+.tt-date { font-size:10px; color:var(--text-secondary); margin-top:2px; font-style:italic; font-weight:500; }
+.tt-body { padding:10px 14px; display:flex; flex-direction:column; gap:5px; }
+.tt-row  { display:flex; align-items:center; gap:8px; }
+.tt-key  { color:var(--text-ctrl); min-width:92px; flex-shrink:0; font-size:11px; font-weight:600; }
+.tt-val  { font-weight:600; color:#1a1f2e; font-family:'Roboto Mono',monospace; font-size:11px; }
+.badge { display:inline-flex; align-items:center; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; font-family:'IBM Plex Mono',monospace; white-space:nowrap; }
+.badge-alarm   { background:rgba(255,59,59,0.10);  color:#d42020; border:1px solid rgba(255,59,59,0.25); }
+.badge-warning { background:rgba(255,140,0,0.10);  color:#c96800; border:1px solid rgba(255,140,0,0.25); }
+.badge-online  { background:rgba(16,178,27,0.10);  color:#0a8a13; border:1px solid rgba(16,178,27,0.25); }
+.badge-offline { background:rgba(168,85,247,0.10); color:#7c22d4; border:1px solid rgba(168,85,247,0.25); }
+.badge-gas-low { background:#fde8e8; color:#b91c1c; border:1px solid rgba(185,28,28,0.30); }
+.badge-gas-mid { background:#fca5a5; color:#7f1d1d; border:1px solid rgba(127,29,29,0.35); }
+.badge-gas-hi  { background:#ef4444; color:#fff;    border:1px solid rgba(127,29,29,0.4); }
+.badge-sys     { background:#ffedd5; color:#9a3412; border:1px solid rgba(249,115,22,0.35); }
+.badge-battery { background:#fef3c7; color:#92400e; border:1px solid rgba(245,158,11,0.4); }
+.badge-eol     { background:#dbeafe; color:#1e3a5f; border:1px solid rgba(30,58,95,0.30); }
+.badge-env     { background:#cffafe; color:#0e7490; border:1px solid rgba(6,182,212,0.35); }
+.tt-status-row { display:flex; flex-wrap:wrap; align-items:center; gap:4px; max-width:180px; row-gap:4px; }
+.net-good { color:#0a8a13; font-weight:700; }
+.net-warn { color:#c96800; font-weight:700; }
+.net-bad  { color:#d42020; font-weight:700; }
+
+/* ── LEGEND ── */
+.legend {
+  position: fixed; bottom: 20px; right: 16px; z-index: 400;
+  background: rgba(255,255,255,0.38); border: 1px solid rgba(255,255,255,0.55);
+  border-radius: 8px; padding: 8px 12px; display: flex; flex-direction: column; gap: 2px;
+  backdrop-filter: blur(18px) saturate(1.5); box-shadow: 0 2px 12px var(--shadow);
+}
+.legend-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; padding: 5px 4px; border-radius: 6px;
+  user-select: none; transition: background 0.15s;
+}
+.legend-section-header:hover { background: var(--hover-bg2); }
+.legend-section-title {
+  font-family:'Roboto Mono', monospace; font-size:9px; font-weight:600;
+  letter-spacing:0.12em; text-transform:uppercase; color:#9ca3af;
+}
+body.dark .legend-section-title { color: #8a9bb0; }
+.legend-arrow {
+  width: 12px; height: 12px; flex-shrink: 0;
+  transition: transform 0.25s ease;
+  color: #9ca3af;
+}
+body.dark .legend-arrow { color: #8a9bb0; }
+.legend-section-header.open .legend-arrow { transform: rotate(180deg); }
+.legend-section-body {
+  max-height: 0; overflow: hidden; opacity: 0;
+  display: flex; flex-direction: column; gap: 1px;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
+}
+.legend-section-body.open { max-height: 300px; opacity: 1; }
+.legend-title {
+  font-family:'Roboto Mono', monospace; font-size:9px; font-weight:600;
+  letter-spacing:0.12em; text-transform:uppercase; color:#9ca3af; margin-bottom:2px;
+}
+.legend-item-wrap { position: relative; }
+.legend-subpanel {
+  max-height:0; overflow:hidden; opacity:0; display:flex; flex-direction:column;
+  gap:2px; padding-left:6px;
+  transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.3s ease;
+}
+.legend-item-wrap.open .legend-subpanel { max-height:180px; opacity:1; padding:4px 0 4px 6px; }
+.legend-item {
+  display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-legend);
+  cursor:pointer; padding:3px 6px; border-radius:6px; transition:background 0.15s; user-select:none;
+}
+.legend-item:hover { background: var(--hover-bg2); }
+.legend-item.filter-active { background: var(--active-bg); font-weight:700; }
+.legend-item.filter-dimmed { opacity: 0.38; }
+.subpanel-item {
+  display:flex; align-items:center; cursor:pointer; padding:3px 6px; border-radius:5px;
+  transition:background 0.12s, opacity 0.15s;
+}
+.subpanel-item:hover { background: var(--hover-bg2); }
+.subpanel-item.filter-active { background: var(--active-bg); }
+.subpanel-item.filter-dimmed { opacity: 0.32; }
+.legend-dot { width:22px; height:22px; flex-shrink:0; transition:transform 0.15s ease; }
+.legend-item:hover .legend-dot { transform: scale(1.15); }
+.legend-item.filter-active .legend-dot { transform: scale(1.2); }
+
+.leaflet-control-attribution { font-size: 9px !important; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">Avolta Connect — Remote Methane Detection Network Fontaine / Grenoble</div>
+  <div class="topbar-stats">
+    <div class="stat"><div class="stat-dot" style="background:var(--alarm);box-shadow:0 0 6px var(--alarm)"></div><span class="stat-count" id="cnt-alarm">0</span><span class="stat-label">Alarme</span></div>
+    <div class="stat"><div class="stat-dot" style="background:var(--warning);box-shadow:0 0 6px var(--warning)"></div><span class="stat-count" id="cnt-warning">0</span><span class="stat-label">Warning</span></div>
+    <div class="stat"><div class="stat-dot" style="background:var(--online);box-shadow:0 0 6px var(--online)"></div><span class="stat-count" id="cnt-online">0</span><span class="stat-label">Connecté</span></div>
+    <div class="stat"><div class="stat-dot" style="background:var(--offline);box-shadow:0 0 6px var(--offline)"></div><span class="stat-count" id="cnt-offline">0</span><span class="stat-label">Hors ligne</span></div>
+  </div>
+</div>
+
+<div id="map"></div>
+
+<div class="zoom-controls">
+  <button class="zoom-btn" id="zoomIn">+</button>
+  <div class="zoom-sep"></div>
+  <button class="zoom-btn" id="zoomOut">−</button>
+  <div class="zoom-sep"></div>
+  <div class="zoom-level" id="zoomLabel">z14</div>
+</div>
+
+<div class="map-controls-right">
+  <button class="ctrl-btn" id="btnResetZoom">
+    <span class="ctrl-tip">Réinitialiser le zoom</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+    </svg>
+  </button>
+  <div class="ctrl-sep"></div>
+  <div class="ctrl-sep"></div>
+  <button class="ctrl-btn" id="btnDark">
+    <span class="ctrl-tip">Mode sombre</span>
+    <svg id="iconDark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+    <svg id="iconLight" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+  </button>
+  <div class="ctrl-sep"></div>
+  <button class="ctrl-btn" id="btnFullscreen">
+    <span class="ctrl-tip">Plein écran</span>
+    <svg id="iconExpand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+      <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+    </svg>
+    <svg id="iconCompress" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+      <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
+      <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
+    </svg>
+  </button>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-inner" id="ttInner">
+    <div class="tt-header">
+      <div class="tt-id" id="ttId"></div>
+      <div class="tt-date" id="ttDate"></div>
+    </div>
+    <div class="tt-body">
+      <div class="tt-row"><span class="tt-key">Status :</span><div class="tt-status-row" id="ttStatus"></div></div>
+      <div class="tt-row"><span class="tt-key">Adresse :</span><span class="tt-val" id="ttAddress"></span></div>
+      <div class="tt-row"><span class="tt-key">LIE :</span><span class="tt-val" id="ttLie"></span></div>
+      <div class="tt-row"><span class="tt-key">Température :</span><span class="tt-val" id="ttTemp"></span></div>
+      <div class="tt-row"><span class="tt-key">Humidité :</span><span class="tt-val" id="ttHumidity"></span></div>
+      <div class="tt-row"><span class="tt-key">Réseau :</span><span class="tt-val" id="ttNetwork"></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+
+  <!-- Section: Device status -->
+  <div class="legend-section-header open" id="sectionDeviceHeader">
+    <span class="legend-section-title">Device status</span>
+    <svg class="legend-arrow" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="2,4 6,8 10,4"/>
+    </svg>
+  </div>
+  <div class="legend-section-body open" id="sectionDeviceBody">
+    <div class="legend-item-wrap">
+      <div class="legend-item" data-filter="alarm">
+        <svg class="legend-dot" viewBox="0 0 84 84"><circle cx="42" cy="42" r="40" fill="rgba(255,59,59,0.25)"/><circle cx="42" cy="42" r="21" fill="#ff3b3b"/><path fill="#ff3b3b" d="M42,84C18.8,84,0,65.1,0,42S18.8,0,42,0s42,18.8,42,42S65.1,84,42,84ZM42,3.2C20.6,3.2,3.2,20.6,3.2,42s17.4,38.7,38.7,38.7S80.7,63.3,80.7,42,63.3,3.2,42,3.2Z"/></svg>
+        Alarme
+      </div>
+      <div class="legend-subpanel">
+        <div class="subpanel-item" data-subfilter="gas-low"><span class="badge badge-gas-low">Alarme faible CH4</span></div>
+        <div class="subpanel-item" data-subfilter="gas-mid"><span class="badge badge-gas-mid">Alarme moyenne CH4</span></div>
+        <div class="subpanel-item" data-subfilter="gas-hi"><span class="badge badge-gas-hi">Alarme élevée CH4</span></div>
+      </div>
+    </div>
+    <div class="legend-item-wrap">
+      <div class="legend-item" data-filter="warning">
+        <svg class="legend-dot" viewBox="0 0 84 84"><circle cx="42" cy="42" r="40" fill="rgba(255,140,0,0.25)"/><circle cx="42" cy="42" r="21" fill="#ff8c00"/><path fill="#ff8c00" d="M42,84C18.8,84,0,65.1,0,42S18.8,0,42,0s42,18.8,42,42S65.1,84,42,84ZM42,3.2C20.6,3.2,3.2,20.6,3.2,42s17.4,38.7,38.7,38.7S80.7,63.3,80.7,42,63.3,3.2,42,3.2Z"/></svg>
+        Warning
+      </div>
+      <div class="legend-subpanel">
+        <div class="subpanel-item" data-subfilter="sys"><span class="badge badge-sys">Panne système</span></div>
+        <div class="subpanel-item" data-subfilter="battery"><span class="badge badge-battery">Battery alarm</span></div>
+        <div class="subpanel-item" data-subfilter="env"><span class="badge badge-env">Env. out of range</span></div>
+        <div class="subpanel-item" data-subfilter="eol"><span class="badge badge-eol">Fin de vie</span></div>
+      </div>
+    </div>
+    <div class="legend-item" data-filter="online">
+      <svg class="legend-dot" viewBox="0 0 84 84"><circle cx="42" cy="42" r="40" fill="rgba(16,178,27,0.25)"/><circle cx="42" cy="42" r="21" fill="#10b21b"/><path fill="#10b21b" d="M42,84C18.8,84,0,65.1,0,42S18.8,0,42,0s42,18.8,42,42S65.1,84,42,84ZM42,3.2C20.6,3.2,3.2,20.6,3.2,42s17.4,38.7,38.7,38.7S80.7,63.3,80.7,42,63.3,3.2,42,3.2Z"/></svg>
+      Connecté
+    </div>
+    <div class="legend-item" data-filter="offline">
+      <svg class="legend-dot" viewBox="0 0 84 84"><circle cx="42" cy="42" r="40" fill="rgba(168,85,247,0.25)"/><circle cx="42" cy="42" r="21" fill="#a855f7"/><path fill="#a855f7" d="M42,84C18.8,84,0,65.1,0,42S18.8,0,42,0s42,18.8,42,42S65.1,84,42,84ZM42,3.2C20.6,3.2,3.2,20.6,3.2,42s17.4,38.7,38.7,38.7S80.7,63.3,80.7,42,63.3,3.2,42,3.2Z"/></svg>
+      Hors ligne
+    </div>
+  </div>
+
+  <div style="height:1px;background:var(--border-sep);margin:3px 0"></div>
+
+  <!-- Section: Zones -->
+  <div class="legend-section-header open" id="sectionZoneHeader">
+    <span class="legend-section-title">Zones</span>
+    <svg class="legend-arrow" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="2,4 6,8 10,4"/>
+    </svg>
+  </div>
+  <div class="legend-section-body open" id="sectionZoneBody">
+    <div class="legend-item zone-toggle" id="toggleZone1">
+      <svg class="legend-dot" viewBox="0 0 22 22" width="22" height="22" style="flex-shrink:0">
+        <rect x="1.5" y="1.5" width="19" height="19" rx="3.5" fill="rgba(84,183,32,0.18)" stroke="#54b720" stroke-width="2" stroke-dasharray="5,2"/>
+      </svg>
+      Fontaine
+    </div>
+    <div class="legend-item zone-toggle" id="toggleZone2">
+      <svg class="legend-dot" viewBox="0 0 22 22" width="22" height="22" style="flex-shrink:0">
+        <rect x="1.5" y="1.5" width="19" height="19" rx="3.5" fill="rgba(59,130,246,0.18)" stroke="#3b82f6" stroke-width="2" stroke-dasharray="5,2"/>
+      </svg>
+      Grenoble
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* ── DEVICES ── */
+const DEVICES = [
+  { id:'ELAV-LTEM-UL-01616001000012', status:'offline', date:'Jan 11, 2025 5:53 AM',  address:'11 Rue Mayen, Fontaine, 38600',  lie:'0% LIE',  temp:'15.3°C', humidity:'72% RH', network:'Hors ligne', lat:45.1920, lng:5.6780, substatus:[] },
+  { id:'ELAV-LTEM-UL-01616001000034', status:'alarm',   date:'Mar 12, 2026 8:21 AM',  address:'4 Av. des Plans, Fontaine',      lie:'22% LIE', temp:'21.7°C', humidity:'58% RH', network:'Critique',   lat:45.1960, lng:5.6830, substatus:[{label:'Alarme faible CH4',cls:'badge-gas-low'},{label:'Panne système',cls:'badge-sys'}] },
+  { id:'ELAV-LTEM-UL-01616001000055', status:'alarm',   date:'Mar 12, 2026 7:05 AM',  address:'18 Rue Lazare Hoche, Fontaine',  lie:'47% LIE', temp:'24.1°C', humidity:'61% RH', network:'Critique',   lat:45.1985, lng:5.6870, substatus:[{label:'Alarme élevée CH4',cls:'badge-gas-hi'},{label:'Battery alarm',cls:'badge-battery'}] },
+  { id:'ELAV-LTEM-UL-01616001000078', status:'warning', date:'Mar 11, 2026 11:44 PM', address:'2 Rue Joseph Bertoin, Fontaine', lie:'8% LIE',  temp:'18.9°C', humidity:'65% RH', network:'Moyen',      lat:45.1945, lng:5.6810, substatus:[{label:'Env. out of range',cls:'badge-env'}] },
+  { id:'ELAV-LTEM-UL-01616001000091', status:'warning', date:'Mar 12, 2026 2:10 AM',  address:'7 Rue Jean Pain, Fontaine',      lie:'5% LIE',  temp:'17.2°C', humidity:'70% RH', network:'Moyen',      lat:45.1938, lng:5.6855, substatus:[{label:'Panne système',cls:'badge-sys'},{label:'Battery alarm',cls:'badge-battery'},{label:'Fin de vie',cls:'badge-eol'}] },
+  { id:'ELAV-LTEM-UL-01616001000103', status:'online',  date:'Mar 12, 2026 9:00 AM',  address:'Rue des Buissonnées, Fontaine',  lie:'0% LIE',  temp:'16.4°C', humidity:'55% RH', network:'Bon',        lat:45.1972, lng:5.6840, substatus:[] },
+  { id:'ELAV-LTEM-UL-01616001000114', status:'online',  date:'Mar 12, 2026 9:01 AM',  address:'9 Rue Léon Pinel, Fontaine',    lie:'0% LIE',  temp:'15.8°C', humidity:'60% RH', network:'Excellent',  lat:45.1930, lng:5.6795, substatus:[] },
+  { id:'ELAV-LTEM-UL-01616001000127', status:'online',  date:'Mar 12, 2026 8:59 AM',  address:'1 Rue des Ergets, Fontaine',    lie:'1% LIE',  temp:'14.9°C', humidity:'68% RH', network:'Bon',        lat:45.1910, lng:5.6820, substatus:[] },
+  { id:'ELAV-LTEM-UL-01616001000138', status:'offline', date:'Mar 10, 2026 3:22 PM',  address:'22 Allée des Plans, Fontaine',  lie:'0% LIE',  temp:'—',      humidity:'—',      network:'Hors ligne', lat:45.1900, lng:5.6865, substatus:[] },
+  { id:'ELAV-LTEM-UL-01616001000145', status:'warning', date:'Mar 12, 2026 6:44 AM',  address:'14 Rue Jules Guesde, Fontaine', lie:'3% LIE',  temp:'19.3°C', humidity:'62% RH', network:'Moyen',      lat:45.1952, lng:5.6848, substatus:[{label:'Panne système',cls:'badge-sys'},{label:'Battery alarm',cls:'badge-battery'}] },
+  { id:'ELAV-LTEM-UL-01616001000201', status:'online',  date:'Mar 12, 2026 8:55 AM',  address:'5 Rue Yves Farge, Fontaine',   lie:'0% LIE',  temp:'16.1°C', humidity:'57% RH', network:'Excellent',  lat:45.1966, lng:5.6822, substatus:[] },
+  { id:'ELAV-LTEM-UL-01616001000202', status:'alarm',   date:'Mar 12, 2026 7:30 AM',  address:'5 Rue Yves Farge, Fontaine',   lie:'35% LIE', temp:'26.8°C', humidity:'80% RH', network:'Critique',   lat:45.1968, lng:5.6825, substatus:[{label:'Alarme élevée CH4',cls:'badge-gas-hi'},{label:'Panne système',cls:'badge-sys'}] },
+  { id:'ELAV-LTEM-UL-01616001000203', status:'offline', date:'Mar 9, 2026 1:00 AM',   address:'6 Rue Yves Farge, Fontaine',   lie:'0% LIE',  temp:'—',      humidity:'—',      network:'Hors ligne', lat:45.1963, lng:5.6819, substatus:[] },
+  // ── Zone 2 — Parc Paul Mistral, Grenoble ──
+  { id:'ELAV-LTEM-UL-02616001000301', status:'online',  date:'Mar 13, 2026 8:50 AM',  address:'Parc Paul Mistral, Grenoble',       lie:'0% LIE',  temp:'14.2°C', humidity:'62% RH', network:'Excellent',  lat:45.1848, lng:5.7360, substatus:[] },
+  { id:'ELAV-LTEM-UL-02616001000302', status:'alarm',   date:'Mar 13, 2026 6:15 AM',  address:'Av. Alsace-Lorraine, Grenoble',     lie:'31% LIE', temp:'22.5°C', humidity:'74% RH', network:'Critique',   lat:45.1825, lng:5.7405, substatus:[{label:'Alarme élevée CH4',cls:'badge-gas-hi'},{label:'Panne système',cls:'badge-sys'}] },
+  { id:'ELAV-LTEM-UL-02616001000303', status:'warning', date:'Mar 13, 2026 3:40 AM',  address:'Bd du Maréchal Joffre, Grenoble',   lie:'6% LIE',  temp:'17.8°C', humidity:'69% RH', network:'Moyen',      lat:45.1860, lng:5.7438, substatus:[{label:'Battery alarm',cls:'badge-battery'},{label:'Env. out of range',cls:'badge-env'}] },
+  { id:'ELAV-LTEM-UL-02616001000304', status:'offline', date:'Mar 11, 2026 9:00 PM',  address:'Rue Félix Viallet, Grenoble',       lie:'0% LIE',  temp:'—',      humidity:'—',      network:'Hors ligne', lat:45.1815, lng:5.7350, substatus:[] },
+  { id:'ELAV-LTEM-UL-02616001000305', status:'online',  date:'Mar 13, 2026 9:02 AM',  address:'Pl. de Verdun, Grenoble',           lie:'0% LIE',  temp:'13.9°C', humidity:'58% RH', network:'Bon',        lat:45.1838, lng:5.7385, substatus:[] },
+];
+
+/* ── INIT LEAFLET ── */
+const DEFAULT_CENTER = [45.195, 5.685];
+const DEFAULT_ZOOM   = 14;
+
+const map = L.map('map', {
+  center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM,
+  zoomControl: false, attributionControl: true,
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 19,
+}).addTo(map);
+
+/* ── ZONE — polygone Leaflet natif, fixe sur la carte ── */
+const ZONE_LATLNGS = [
+  [45.2002, 5.6755],  // haut-gauche
+  [45.1998, 5.6892],  // haut-droite
+  [45.1978, 5.6915],  // droite haute
+  [45.1948, 5.6905],  // droite milieu
+  [45.1893, 5.6888],  // bas-droite
+  [45.1878, 5.6828],  // bas milieu
+  [45.1888, 5.6752],  // bas-gauche
+  [45.1942, 5.6738],  // gauche basse
+];
+
+// Pane dédié entre les tuiles et les markers
+map.createPane('zonePane');
+map.getPane('zonePane').style.zIndex = 350;
+map.getPane('zonePane').style.pointerEvents = 'none';
+
+const zone1Layer = L.polygon(ZONE_LATLNGS, {
+  pane:        'zonePane',
+  color:       '#54b720',
+  weight:      3,
+  dashArray:   '18, 5',
+  lineCap:     'round',
+  lineJoin:    'round',
+  fillColor:   '#54b720',
+  fillOpacity: 0.18,
+  interactive: false,
+}).addTo(map);
+let zone1Visible = true;
+
+/* ── ZONE 2 — Parc Paul Mistral, Grenoble ── */
+const ZONE2_LATLNGS = [
+  [45.1875, 5.7330],  // haut-gauche
+  [45.1878, 5.7440],  // haut-droite
+  [45.1865, 5.7460],  // droite haute
+  [45.1832, 5.7465],  // droite basse
+  [45.1808, 5.7435],  // bas-droite
+  [45.1800, 5.7365],  // bas milieu
+  [45.1812, 5.7320],  // bas-gauche
+  [45.1848, 5.7308],  // gauche basse
+  [45.1865, 5.7322],  // gauche haute
+];
+
+const zone2Layer = L.polygon(ZONE2_LATLNGS, {
+  pane:        'zonePane',
+  color:       '#3b82f6',
+  weight:      3,
+  dashArray:   '18, 5',
+  lineCap:     'round',
+  lineJoin:    'round',
+  fillColor:   '#3b82f6',
+  fillOpacity: 0.18,
+  interactive: false,
+}).addTo(map);
+let zone2Visible = true;
+
+/* ── SVG PIN ── */
+function makePinSVG(status) {
+  const c = {
+    alarm:   { fill:'#ff3b3b', halo:'rgba(255,59,59,0.22)'  },
+    warning: { fill:'#ff8c00', halo:'rgba(255,140,0,0.22)'  },
+    online:  { fill:'#10b21b', halo:'rgba(16,178,27,0.22)'  },
+    offline: { fill:'#a855f7', halo:'rgba(168,85,247,0.22)' },
+  }[status];
+  return `<svg viewBox="0 0 83.92 83.92" xmlns="http://www.w3.org/2000/svg" width="26" height="26" style="display:block">
+    <circle cx="41.96" cy="41.96" r="40.34" fill="${c.halo}"/>
+    <circle cx="41.96" cy="41.96" r="20.58" fill="${c.fill}"/>
+    <path fill="${c.fill}" d="M41.96,83.92C18.82,83.92,0,65.09,0,41.96S18.82,0,41.96,0s41.96,18.82,41.96,41.96-18.82,41.96-41.96,41.96ZM41.96,3.23C20.6,3.23,3.23,20.6,3.23,41.96s17.37,38.73,38.73,38.73,38.73-17.37,38.73-38.73S63.31,3.23,41.96,3.23Z"/>
+  </svg>`;
+}
+
+function createIcon(status) {
+  const ring = (status === 'alarm' || status === 'warning')
+    ? `<div style="position:absolute;top:0;left:0;width:26px;height:26px;border-radius:50%;
+        border:2.5px solid ${status==='alarm'?'#ff3b3b':'#ff8c00'};
+        background:${status==='alarm'?'rgba(255,59,59,0.20)':'rgba(255,140,0,0.20)'};
+        animation:pulse-ring ${status==='alarm'?'1.2':'1.8'}s ease-out infinite;"></div>` : '';
+  return L.divIcon({
+    className: '',
+    iconSize:  [26, 26], iconAnchor: [13, 13],
+    html: `<div style="position:relative;width:26px;height:26px;cursor:pointer">${ring}${makePinSVG(status)}</div>`,
+  });
+}
+
+/* Pulse keyframes */
+const s = document.createElement('style');
+s.textContent = `@keyframes pulse-ring{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.6);opacity:0}}`;
+document.head.appendChild(s);
+
+/* ── BUILD MARKERS ── */
+const tooltip = document.getElementById('tooltip');
+const ttInner = document.getElementById('ttInner');
+const labels  = { alarm:'Alarme', warning:'Warning', online:'Connecté', offline:'Hors ligne' };
+const counts  = { alarm:0, warning:0, online:0, offline:0 };
+const markers = [];
+
+DEVICES.forEach((d, i) => {
+  counts[d.status]++;
+  const marker = L.marker([d.lat, d.lng], { icon: createIcon(d.status) }).addTo(map);
+  marker._dev = d;
+  markers.push(marker);
+  marker.on('mouseover', e => showTT(e.originalEvent, d));
+  marker.on('mousemove', e => moveTT(e.originalEvent));
+  marker.on('mouseout',  hideTT);
+});
+
+document.getElementById('cnt-alarm').textContent   = counts.alarm;
+document.getElementById('cnt-warning').textContent = counts.warning;
+document.getElementById('cnt-online').textContent  = counts.online;
+document.getElementById('cnt-offline').textContent = counts.offline;
+
+/* ── ZOOM label ── */
+function updateZoomLabel() { document.getElementById('zoomLabel').textContent = 'z' + map.getZoom(); }
+map.on('zoomend', updateZoomLabel); updateZoomLabel();
+
+document.getElementById('zoomIn').addEventListener('click',  () => map.zoomIn());
+document.getElementById('zoomOut').addEventListener('click', () => map.zoomOut());
+document.getElementById('btnResetZoom').addEventListener('click', () => map.setView(DEFAULT_CENTER, DEFAULT_ZOOM, { animate: true }));
+
+/* ── Fullscreen ── */
+const btnFS = document.getElementById('btnFullscreen');
+btnFS.addEventListener('click', () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen().catch(()=>{});
+});
+document.addEventListener('fullscreenchange', () => {
+  const isFS = !!document.fullscreenElement;
+  document.getElementById('iconExpand').style.display  = isFS ? 'none'  : 'block';
+  document.getElementById('iconCompress').style.display = isFS ? 'block' : 'none';
+  setTimeout(() => map.invalidateSize(), 100);
+});
+
+/* ── TOOLTIP ── */
+function showTT(e, d) {
+  ttInner.dataset.status = d.status;
+  document.getElementById('ttId').textContent       = d.id;
+  document.getElementById('ttDate').textContent     = d.date;
+  document.getElementById('ttAddress').textContent  = d.address;
+  document.getElementById('ttLie').textContent      = d.lie;
+  document.getElementById('ttTemp').textContent     = d.temp;
+  document.getElementById('ttHumidity').textContent = d.humidity;
+  const gasClasses = new Set(['badge-gas-low','badge-gas-mid','badge-gas-hi']);
+  const hasGas = d.substatus && d.substatus.some(s => gasClasses.has(s.cls));
+  let html = '';
+  if (!hasGas) html = `<span class="badge badge-${d.status}">${labels[d.status]}</span>`;
+  if (d.substatus) d.substatus.forEach(s => { html += `<span class="badge ${s.cls}">${s.label}</span>`; });
+  document.getElementById('ttStatus').innerHTML = html;
+  const nc = /^(bon|excellent)/i.test(d.network)?'net-good':/moyen/i.test(d.network)?'net-warn':'net-bad';
+  const ne = document.getElementById('ttNetwork');
+  ne.textContent = d.network; ne.className = 'tt-val '+nc;
+  moveTT(e);
+  tooltip.classList.add('visible');
+}
+function moveTT(e) {
+  let x = e.clientX+18, y = e.clientY-24;
+  const tw=258, th=195, vw=window.innerWidth, vh=window.innerHeight;
+  if (x+tw>vw-8) x = e.clientX-tw-18;
+  if (y+th>vh-8) y = vh-th-8;
+  if (y<4) y=4;
+  tooltip.style.left = x+'px'; tooltip.style.top = y+'px';
+}
+function hideTT() { tooltip.classList.remove('visible'); }
+map.on('movestart', hideTT);
+
+/* ── LEGEND SECTION ACCORDIONS ── */
+[
+  ['sectionDeviceHeader', 'sectionDeviceBody'],
+  ['sectionZoneHeader',   'sectionZoneBody'],
+].forEach(([hId, bId]) => {
+  const hdr  = document.getElementById(hId);
+  const body = document.getElementById(bId);
+  hdr.addEventListener('click', () => {
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    hdr.classList.toggle('open', !isOpen);
+  });
+});
+
+/* ── ZONE TOGGLES ── */
+function setupZoneToggle(btnId, layer, visRef, setVis) {
+  const btn = document.getElementById(btnId);
+  btn.addEventListener('click', () => {
+    const newVis = !setVis.val;
+    setVis.val = newVis;
+    if (newVis) layer.addTo(map); else map.removeLayer(layer);
+    btn.style.opacity = newVis ? '1' : '0.38';
+  });
+}
+const z1vis = { val: true }, z2vis = { val: true };
+setupZoneToggle('toggleZone1', zone1Layer, z1vis, z1vis);
+setupZoneToggle('toggleZone2', zone2Layer, z2vis, z2vis);
+
+/* ── DARK MODE ── */
+const btnDark  = document.getElementById('btnDark');
+const iconDark = document.getElementById('iconDark');
+const iconLight= document.getElementById('iconLight');
+let isDark = false;
+
+btnDark.addEventListener('click', () => {
+  isDark = !isDark;
+  document.body.classList.toggle('dark', isDark);
+  iconDark.style.display  = isDark ? 'none'  : 'block';
+  iconLight.style.display = isDark ? 'block' : 'none';
+  btnDark.querySelector('.ctrl-tip').textContent = isDark ? 'Mode clair' : 'Mode sombre';
+
+});
+
+/* ── LEGEND FILTER ── */
+let activeFilter = null, activeSubFilter = null;
+const subFilterToCls = {'gas-low':'badge-gas-low','gas-mid':'badge-gas-mid','gas-hi':'badge-gas-hi','sys':'badge-sys','battery':'badge-battery','env':'badge-env','eol':'badge-eol'};
+const subFilterPanel = {'gas-low':'alarm','gas-mid':'alarm','gas-hi':'alarm','sys':'warning','battery':'warning','env':'warning','eol':'warning'};
+
+document.querySelectorAll('.legend-item[data-filter]').forEach(item => {
+  item.addEventListener('click', () => {
+    const status = item.dataset.filter;
+    const wrap   = item.closest('.legend-item-wrap');
+    if (wrap && wrap.querySelector('.legend-subpanel')) {
+      const isOpen = wrap.classList.contains('open');
+      document.querySelectorAll('.legend-item-wrap.open').forEach(w => w.classList.remove('open'));
+      activeSubFilter = null;
+      activeFilter = isOpen ? null : status;
+      if (!isOpen) wrap.classList.add('open');
+    } else {
+      // Ferme tous les accordions ouverts
+      document.querySelectorAll('.legend-item-wrap.open').forEach(w => w.classList.remove('open'));
+      activeSubFilter = null;
+      activeFilter    = (activeFilter === status) ? null : status;
+    }
+    applyFilter();
+  });
+});
+document.querySelectorAll('.subpanel-item[data-subfilter]').forEach(item => {
+  item.addEventListener('click', e => {
+    e.stopPropagation();
+    const sub = item.dataset.subfilter;
+    activeSubFilter = activeSubFilter === sub ? null : sub;
+    activeFilter = item.closest('.legend-item-wrap').querySelector('.legend-item[data-filter]').dataset.filter;
+    applyFilter();
+  });
+});
+
+function applyFilter() {
+  document.querySelectorAll('.legend-item[data-filter]').forEach(item => {
+    item.classList.remove('filter-active','filter-dimmed');
+    if (!activeFilter) return;
+    item.classList.add(item.dataset.filter===activeFilter?'filter-active':'filter-dimmed');
+  });
+  document.querySelectorAll('.subpanel-item[data-subfilter]').forEach(item => {
+    item.classList.remove('filter-active','filter-dimmed');
+    if (!activeSubFilter) return;
+    if (subFilterPanel[item.dataset.subfilter] !== subFilterPanel[activeSubFilter]) return;
+    item.classList.add(item.dataset.subfilter===activeSubFilter?'filter-active':'filter-dimmed');
+  });
+  const targetCls = activeSubFilter ? subFilterToCls[activeSubFilter] : null;
+  markers.forEach((marker, i) => {
+    const d  = DEVICES[i];
+    const el = marker.getElement();
+    if (!el) return;
+    el.style.transition = 'opacity 0.2s ease';
+    if (!activeFilter) { el.style.opacity='1'; el.style.pointerEvents='all'; return; }
+    if (activeSubFilter) {
+      const has = Array.isArray(d.substatus) && d.substatus.some(s => s.cls===targetCls);
+      el.style.opacity = has?'1':'0'; el.style.pointerEvents = has?'all':'none';
+    } else {
+      const match = d.status===activeFilter;
+      el.style.opacity = match?'1':'0'; el.style.pointerEvents = match?'all':'none';
+    }
+  });
+  if (activeFilter) hideTT();
+}
+</script>
+</body>
+</html>
