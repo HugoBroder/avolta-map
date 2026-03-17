@@ -10,7 +10,7 @@
 :root {
   --alarm:   #ff3b3b;
   --warning: #ff8c00;
-  --online:  #10b21b;
+  --operational:  #10b21b;
   --offline: #a855f7;
 
   /* Light mode tokens */
@@ -143,7 +143,7 @@ body.dark .badge-env     { background:#cffafe; color:#0e7490; border-color:#67e8
 /* Dark mode: colored left border on tooltip — outline style */
 body.dark .tooltip-inner[data-status="alarm"]   { border-left: 4px solid #ff3b3b; box-shadow: inset 3px 0 12px rgba(255,59,59,0.15), 0 8px 36px rgba(0,0,0,0.60); }
 body.dark .tooltip-inner[data-status="warning"] { border-left: 4px solid #ff8c00; box-shadow: inset 3px 0 12px rgba(255,140,0,0.15), 0 8px 36px rgba(0,0,0,0.60); }
-body.dark .tooltip-inner[data-status="online"]  { border-left: 4px solid #10b21b; box-shadow: inset 3px 0 12px rgba(16,178,27,0.15), 0 8px 36px rgba(0,0,0,0.60); }
+body.dark .tooltip-inner[data-status="ok"]  { border-left: 4px solid #10b21b; box-shadow: inset 3px 0 12px rgba(16,178,27,0.15), 0 8px 36px rgba(0,0,0,0.60); }
 body.dark .tooltip-inner[data-status="offline"] { border-left: 4px solid #a855f7; box-shadow: inset 3px 0 12px rgba(168,85,247,0.15), 0 8px 36px rgba(0,0,0,0.60); }
 * { margin:0; padding:0; box-sizing:border-box; }
 html, body { height: 100%; overflow: hidden; }
@@ -264,7 +264,7 @@ body.dark .leaflet-tile-pane {
 }
 .tooltip-inner[data-status="alarm"]   { border-left: 4px solid var(--alarm); }
 .tooltip-inner[data-status="warning"] { border-left: 4px solid var(--warning); }
-.tooltip-inner[data-status="online"]  { border-left: 4px solid var(--online); }
+.tooltip-inner[data-status="ok"]  { border-left: 4px solid var(--online); }
 .tooltip-inner[data-status="offline"] { border-left: 4px solid var(--offline); }
 .tt-header { padding:10px 14px 8px; border-bottom:1px solid var(--border-sep); }
 .tt-id   { font-family:'Roboto Mono',monospace; font-size:10.5px; font-weight:600; color:#1a1f2e; word-break:break-all; line-height:1.4; }
@@ -356,12 +356,12 @@ body.dark .legend-arrow { color: #8a9bb0; }
 <body>
 
 <div class="topbar">
-  <div class="topbar-title">Avolta Connect — Remote Methane Detection Network Fontaine / Grenoble</div>
+  <div class="topbar-title">Avolta Connect — Remote Methane Detection Network — Fontaine / Grenoble</div>
   <div class="topbar-stats">
-    <div class="stat"><div class="stat-dot" style="background:var(--alarm);box-shadow:0 0 6px var(--alarm)"></div><span class="stat-count" id="cnt-alarm">0</span><span class="stat-label">Alarme</span></div>
+    <div class="stat"><div class="stat-dot" style="background:var(--alarm);box-shadow:0 0 6px var(--alarm)"></div><span class="stat-count" id="cnt-alarm">0</span><span class="stat-label">Alarm</span></div>
     <div class="stat"><div class="stat-dot" style="background:var(--warning);box-shadow:0 0 6px var(--warning)"></div><span class="stat-count" id="cnt-warning">0</span><span class="stat-label">Warning</span></div>
-    <div class="stat"><div class="stat-dot" style="background:var(--online);box-shadow:0 0 6px var(--online)"></div><span class="stat-count" id="cnt-online">0</span><span class="stat-label">Connecté</span></div>
-    <div class="stat"><div class="stat-dot" style="background:var(--offline);box-shadow:0 0 6px var(--offline)"></div><span class="stat-count" id="cnt-offline">0</span><span class="stat-label">Hors ligne</span></div>
+    <div class="stat"><div class="stat-dot" style="background:var(--online);box-shadow:0 0 6px var(--online)"></div><span class="stat-count" id="cnt-online">0</span><span class="stat-label">Operational</span></div>
+    <div class="stat"><div class="stat-dot" style="background:var(--offline);box-shadow:0 0 6px var(--offline)"></div><span class="stat-count" id="cnt-offline">0</span><span class="stat-label">Offline</span></div>
   </div>
 </div>
 
@@ -377,7 +377,7 @@ body.dark .legend-arrow { color: #8a9bb0; }
 
 <div class="map-controls-right">
   <button class="ctrl-btn" id="btnResetZoom">
-    <span class="ctrl-tip">Réinitialiser le zoom</span>
+    <span class="ctrl-tip">Reset Zoom</span>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
@@ -386,7 +386,7 @@ body.dark .legend-arrow { color: #8a9bb0; }
   <div class="ctrl-sep"></div>
   <div class="ctrl-sep"></div>
   <button class="ctrl-btn" id="btnDark">
-    <span class="ctrl-tip">Mode sombre</span>
+    <span class="ctrl-tip">Dark Mode</span>
     <svg id="iconDark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
     </svg>
@@ -400,7 +400,7 @@ body.dark .legend-arrow { color: #8a9bb0; }
   </button>
   <div class="ctrl-sep"></div>
   <button class="ctrl-btn" id="btnFullscreen">
-    <span class="ctrl-tip">Plein écran</span>
+    <span class="ctrl-tip">Full Screen</span>
     <svg id="iconExpand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
       <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
@@ -421,11 +421,11 @@ body.dark .legend-arrow { color: #8a9bb0; }
     </div>
     <div class="tt-body">
       <div class="tt-row"><span class="tt-key">Status :</span><div class="tt-status-row" id="ttStatus"></div></div>
-      <div class="tt-row"><span class="tt-key">Adresse :</span><span class="tt-val" id="ttAddress"></span></div>
-      <div class="tt-row"><span class="tt-key">LIE :</span><span class="tt-val" id="ttLie"></span></div>
-      <div class="tt-row"><span class="tt-key">Température :</span><span class="tt-val" id="ttTemp"></span></div>
-      <div class="tt-row"><span class="tt-key">Humidité :</span><span class="tt-val" id="ttHumidity"></span></div>
-      <div class="tt-row"><span class="tt-key">Réseau :</span><span class="tt-val" id="ttNetwork"></span></div>
+      <div class="tt-row"><span class="tt-key">Adress :</span><span class="tt-val" id="ttAddress"></span></div>
+      <div class="tt-row"><span class="tt-key">LEL :</span><span class="tt-val" id="ttLie"></span></div>
+      <div class="tt-row"><span class="tt-key">Temperature :</span><span class="tt-val" id="ttTemp"></span></div>
+      <div class="tt-row"><span class="tt-key">Humidity :</span><span class="tt-val" id="ttHumidity"></span></div>
+      <div class="tt-row"><span class="tt-key">Network :</span><span class="tt-val" id="ttNetwork"></span></div>
     </div>
   </div>
 </div>
@@ -444,12 +444,12 @@ body.dark .legend-arrow { color: #8a9bb0; }
     <div class="legend-item-wrap">
       <div class="legend-item" data-filter="alarm">
         <svg class="legend-dot" viewBox="0 0 84 84"><circle cx="42" cy="42" r="40" fill="rgba(255,59,59,0.25)"/><circle cx="42" cy="42" r="21" fill="#ff3b3b"/><path fill="#ff3b3b" d="M42,84C18.8,84,0,65.1,0,42S18.8,0,42,0s42,18.8,42,42S65.1,84,42,84ZM42,3.2C20.6,3.2,3.2,20.6,3.2,42s17.4,38.7,38.7,38.7S80.7,63.3,80.7,42,63.3,3.2,42,3.2Z"/></svg>
-        Alarme
+        Alarm
       </div>
       <div class="legend-subpanel">
-        <div class="subpanel-item" data-subfilter="gas-low"><span class="badge badge-gas-low">Alarme faible CH4</span></div>
-        <div class="subpanel-item" data-subfilter="gas-mid"><span class="badge badge-gas-mid">Alarme moyenne CH4</span></div>
-        <div class="subpanel-item" data-subfilter="gas-hi"><span class="badge badge-gas-hi">Alarme élevée CH4</span></div>
+        <div class="subpanel-item" data-subfilter="gas-low"><span class="badge badge-gas-low">CH4 Low Alarm</span></div>
+        <div class="subpanel-item" data-subfilter="gas-mid"><span class="badge badge-gas-mid">CH4 Medium Alarm</span></div>
+        <div class="subpanel-item" data-subfilter="gas-hi"><span class="badge badge-gas-hi">CH4 High Alarm</span></div>
       </div>
     </div>
     <div class="legend-item-wrap">
@@ -458,19 +458,19 @@ body.dark .legend-arrow { color: #8a9bb0; }
         Warning
       </div>
       <div class="legend-subpanel">
-        <div class="subpanel-item" data-subfilter="sys"><span class="badge badge-sys">Panne système</span></div>
+        <div class="subpanel-item" data-subfilter="sys"><span class="badge badge-sys">System Failure</span></div>
         <div class="subpanel-item" data-subfilter="battery"><span class="badge badge-battery">Battery alarm</span></div>
         <div class="subpanel-item" data-subfilter="env"><span class="badge badge-env">Env. out of range</span></div>
-        <div class="subpanel-item" data-subfilter="eol"><span class="badge badge-eol">Fin de vie</span></div>
+        <div class="subpanel-item" data-subfilter="eol"><span class="badge badge-eol">End of Life</span></div>
       </div>
     </div>
-    <div class="legend-item" data-filter="online">
+    <div class="legend-item" data-filter="operational">
       <svg class="legend-dot" viewBox="0 0 84 84"><circle cx="42" cy="42" r="40" fill="rgba(16,178,27,0.25)"/><circle cx="42" cy="42" r="21" fill="#10b21b"/><path fill="#10b21b" d="M42,84C18.8,84,0,65.1,0,42S18.8,0,42,0s42,18.8,42,42S65.1,84,42,84ZM42,3.2C20.6,3.2,3.2,20.6,3.2,42s17.4,38.7,38.7,38.7S80.7,63.3,80.7,42,63.3,3.2,42,3.2Z"/></svg>
-      Connecté
+      Operational
     </div>
     <div class="legend-item" data-filter="offline">
       <svg class="legend-dot" viewBox="0 0 84 84"><circle cx="42" cy="42" r="40" fill="rgba(168,85,247,0.25)"/><circle cx="42" cy="42" r="21" fill="#a855f7"/><path fill="#a855f7" d="M42,84C18.8,84,0,65.1,0,42S18.8,0,42,0s42,18.8,42,42S65.1,84,42,84ZM42,3.2C20.6,3.2,3.2,20.6,3.2,42s17.4,38.7,38.7,38.7S80.7,63.3,80.7,42,63.3,3.2,42,3.2Z"/></svg>
-      Hors ligne
+      Offline
     </div>
   </div>
 
@@ -504,25 +504,25 @@ body.dark .legend-arrow { color: #8a9bb0; }
 <script>
 /* ── DEVICES ── */
 const DEVICES = [
-  { id:'ELAV-LTEM-UL-01616001000012', status:'offline', date:'Jan 11, 2025 5:53 AM',  address:'11 Rue Mayen, Fontaine, 38600',  lie:'0% LIE',  temp:'15.3°C', humidity:'72% RH', network:'Hors ligne', lat:45.1920, lng:5.6780, substatus:[] },
-  { id:'ELAV-LTEM-UL-01616001000034', status:'alarm',   date:'Mar 12, 2026 8:21 AM',  address:'4 Av. des Plans, Fontaine',      lie:'22% LIE', temp:'21.7°C', humidity:'58% RH', network:'Critique',   lat:45.1960, lng:5.6830, substatus:[{label:'Alarme faible CH4',cls:'badge-gas-low'},{label:'Panne système',cls:'badge-sys'}] },
-  { id:'ELAV-LTEM-UL-01616001000055', status:'alarm',   date:'Mar 12, 2026 7:05 AM',  address:'18 Rue Lazare Hoche, Fontaine',  lie:'47% LIE', temp:'24.1°C', humidity:'61% RH', network:'Critique',   lat:45.1985, lng:5.6870, substatus:[{label:'Alarme élevée CH4',cls:'badge-gas-hi'},{label:'Battery alarm',cls:'badge-battery'}] },
-  { id:'ELAV-LTEM-UL-01616001000078', status:'warning', date:'Mar 11, 2026 11:44 PM', address:'2 Rue Joseph Bertoin, Fontaine', lie:'8% LIE',  temp:'18.9°C', humidity:'65% RH', network:'Moyen',      lat:45.1945, lng:5.6810, substatus:[{label:'Env. out of range',cls:'badge-env'}] },
-  { id:'ELAV-LTEM-UL-01616001000091', status:'warning', date:'Mar 12, 2026 2:10 AM',  address:'7 Rue Jean Pain, Fontaine',      lie:'5% LIE',  temp:'17.2°C', humidity:'70% RH', network:'Moyen',      lat:45.1938, lng:5.6855, substatus:[{label:'Panne système',cls:'badge-sys'},{label:'Battery alarm',cls:'badge-battery'},{label:'Fin de vie',cls:'badge-eol'}] },
-  { id:'ELAV-LTEM-UL-01616001000103', status:'online',  date:'Mar 12, 2026 9:00 AM',  address:'Rue des Buissonnées, Fontaine',  lie:'0% LIE',  temp:'16.4°C', humidity:'55% RH', network:'Bon',        lat:45.1972, lng:5.6840, substatus:[] },
-  { id:'ELAV-LTEM-UL-01616001000114', status:'online',  date:'Mar 12, 2026 9:01 AM',  address:'9 Rue Léon Pinel, Fontaine',    lie:'0% LIE',  temp:'15.8°C', humidity:'60% RH', network:'Excellent',  lat:45.1930, lng:5.6795, substatus:[] },
-  { id:'ELAV-LTEM-UL-01616001000127', status:'online',  date:'Mar 12, 2026 8:59 AM',  address:'1 Rue des Ergets, Fontaine',    lie:'1% LIE',  temp:'14.9°C', humidity:'68% RH', network:'Bon',        lat:45.1910, lng:5.6820, substatus:[] },
-  { id:'ELAV-LTEM-UL-01616001000138', status:'offline', date:'Mar 10, 2026 3:22 PM',  address:'22 Allée des Plans, Fontaine',  lie:'0% LIE',  temp:'—',      humidity:'—',      network:'Hors ligne', lat:45.1900, lng:5.6865, substatus:[] },
-  { id:'ELAV-LTEM-UL-01616001000145', status:'warning', date:'Mar 12, 2026 6:44 AM',  address:'14 Rue Jules Guesde, Fontaine', lie:'3% LIE',  temp:'19.3°C', humidity:'62% RH', network:'Moyen',      lat:45.1952, lng:5.6848, substatus:[{label:'Panne système',cls:'badge-sys'},{label:'Battery alarm',cls:'badge-battery'}] },
-  { id:'ELAV-LTEM-UL-01616001000201', status:'online',  date:'Mar 12, 2026 8:55 AM',  address:'5 Rue Yves Farge, Fontaine',   lie:'0% LIE',  temp:'16.1°C', humidity:'57% RH', network:'Excellent',  lat:45.1966, lng:5.6822, substatus:[] },
-  { id:'ELAV-LTEM-UL-01616001000202', status:'alarm',   date:'Mar 12, 2026 7:30 AM',  address:'5 Rue Yves Farge, Fontaine',   lie:'35% LIE', temp:'26.8°C', humidity:'80% RH', network:'Critique',   lat:45.1968, lng:5.6825, substatus:[{label:'Alarme élevée CH4',cls:'badge-gas-hi'},{label:'Panne système',cls:'badge-sys'}] },
-  { id:'ELAV-LTEM-UL-01616001000203', status:'offline', date:'Mar 9, 2026 1:00 AM',   address:'6 Rue Yves Farge, Fontaine',   lie:'0% LIE',  temp:'—',      humidity:'—',      network:'Hors ligne', lat:45.1963, lng:5.6819, substatus:[] },
+  { id:'ELAV-LTEM-UL-01616001000012', status:'offline', date:'Jan 11, 2025 5:53 AM',  address:'11 Rue Mayen, Fontaine, 38600',  lie:'0% LEL',  temp:'15.3°C', humidity:'72% RH', network:'Offline', lat:45.1920, lng:5.6780, substatus:[] },
+  { id:'ELAV-LTEM-UL-01616001000034', status:'alarm',   date:'Mar 12, 2026 8:21 AM',  address:'4 Av. des Plans, Fontaine',      lie:'22% LEL', temp:'21.7°C', humidity:'58% RH', network:'Critical',   lat:45.1960, lng:5.6830, substatus:[{label:'CH4 Low Alarm',cls:'badge-gas-low'},{label:'System Failure',cls:'badge-sys'}] },
+  { id:'ELAV-LTEM-UL-01616001000055', status:'alarm',   date:'Mar 12, 2026 7:05 AM',  address:'18 Rue Lazare Hoche, Fontaine',  lie:'47% LEL', temp:'24.1°C', humidity:'61% RH', network:'Critical',   lat:45.1985, lng:5.6870, substatus:[{label:'CH4 High Alarm',cls:'badge-gas-hi'},{label:'Battery alarm',cls:'badge-battery'}] },
+  { id:'ELAV-LTEM-UL-01616001000078', status:'warning', date:'Mar 11, 2026 11:44 PM', address:'2 Rue Joseph Bertoin, Fontaine', lie:'8% LEL',  temp:'18.9°C', humidity:'65% RH', network:'Fair',      lat:45.1945, lng:5.6810, substatus:[{label:'Env. out of range',cls:'badge-env'}] },
+  { id:'ELAV-LTEM-UL-01616001000091', status:'warning', date:'Mar 12, 2026 2:10 AM',  address:'7 Rue Jean Pain, Fontaine',      lie:'5% LEL',  temp:'17.2°C', humidity:'70% RH', network:'Fair',      lat:45.1938, lng:5.6855, substatus:[{label:'System Failure',cls:'badge-sys'},{label:'Battery alarm',cls:'badge-battery'},{label:'End of Life',cls:'badge-eol'}] },
+  { id:'ELAV-LTEM-UL-01616001000103', status:'online',  date:'Mar 12, 2026 9:00 AM',  address:'Rue des Buissonnées, Fontaine',  lie:'0% LEL',  temp:'16.4°C', humidity:'55% RH', network:'Good',        lat:45.1972, lng:5.6840, substatus:[] },
+  { id:'ELAV-LTEM-UL-01616001000114', status:'ok',  date:'Mar 12, 2026 9:01 AM',  address:'9 Rue Léon Pinel, Fontaine',    lie:'0% LEL',  temp:'15.8°C', humidity:'60% RH', network:'Optimal',  lat:45.1930, lng:5.6795, substatus:[] },
+  { id:'ELAV-LTEM-UL-01616001000127', status:'ok',  date:'Mar 12, 2026 8:59 AM',  address:'1 Rue des Ergets, Fontaine',    lie:'1% LEL',  temp:'14.9°C', humidity:'68% RH', network:'Good',        lat:45.1910, lng:5.6820, substatus:[] },
+  { id:'ELAV-LTEM-UL-01616001000138', status:'offline', date:'Mar 10, 2026 3:22 PM',  address:'22 Allée des Plans, Fontaine',  lie:'0% LEL',  temp:'—',      humidity:'—',      network:'Offline', lat:45.1900, lng:5.6865, substatus:[] },
+  { id:'ELAV-LTEM-UL-01616001000145', status:'warning', date:'Mar 12, 2026 6:44 AM',  address:'14 Rue Jules Guesde, Fontaine', lie:'3% LEL',  temp:'19.3°C', humidity:'62% RH', network:'Fair',      lat:45.1952, lng:5.6848, substatus:[{label:'System Failure',cls:'badge-sys'},{label:'Battery alarm',cls:'badge-battery'}] },
+  { id:'ELAV-LTEM-UL-01616001000201', status:'ok',  date:'Mar 12, 2026 8:55 AM',  address:'5 Rue Yves Farge, Fontaine',   lie:'0% LIE',  temp:'16.1°C', humidity:'57% RH', network:'Optimal',  lat:45.1966, lng:5.6822, substatus:[] },
+  { id:'ELAV-LTEM-UL-01616001000202', status:'alarm',   date:'Mar 12, 2026 7:30 AM',  address:'5 Rue Yves Farge, Fontaine',   lie:'35% LEL', temp:'26.8°C', humidity:'80% RH', network:'Critical',   lat:45.1968, lng:5.6825, substatus:[{label:'CH4 High Alarm',cls:'badge-gas-hi'},{label:'System Failure',cls:'badge-sys'}] },
+  { id:'ELAV-LTEM-UL-01616001000203', status:'offline', date:'Mar 9, 2026 1:00 AM',   address:'6 Rue Yves Farge, Fontaine',   lie:'0% LEL',  temp:'—',      humidity:'—',      network:'Offline', lat:45.1963, lng:5.6819, substatus:[] },
   // ── Zone 2 — Parc Paul Mistral, Grenoble ──
-  { id:'ELAV-LTEM-UL-02616001000301', status:'online',  date:'Mar 13, 2026 8:50 AM',  address:'Parc Paul Mistral, Grenoble',       lie:'0% LIE',  temp:'14.2°C', humidity:'62% RH', network:'Excellent',  lat:45.1848, lng:5.7360, substatus:[] },
-  { id:'ELAV-LTEM-UL-02616001000302', status:'alarm',   date:'Mar 13, 2026 6:15 AM',  address:'Av. Alsace-Lorraine, Grenoble',     lie:'31% LIE', temp:'22.5°C', humidity:'74% RH', network:'Critique',   lat:45.1825, lng:5.7405, substatus:[{label:'Alarme élevée CH4',cls:'badge-gas-hi'},{label:'Panne système',cls:'badge-sys'}] },
-  { id:'ELAV-LTEM-UL-02616001000303', status:'warning', date:'Mar 13, 2026 3:40 AM',  address:'Bd du Maréchal Joffre, Grenoble',   lie:'6% LIE',  temp:'17.8°C', humidity:'69% RH', network:'Moyen',      lat:45.1860, lng:5.7438, substatus:[{label:'Battery alarm',cls:'badge-battery'},{label:'Env. out of range',cls:'badge-env'}] },
-  { id:'ELAV-LTEM-UL-02616001000304', status:'offline', date:'Mar 11, 2026 9:00 PM',  address:'Rue Félix Viallet, Grenoble',       lie:'0% LIE',  temp:'—',      humidity:'—',      network:'Hors ligne', lat:45.1815, lng:5.7350, substatus:[] },
-  { id:'ELAV-LTEM-UL-02616001000305', status:'online',  date:'Mar 13, 2026 9:02 AM',  address:'Pl. de Verdun, Grenoble',           lie:'0% LIE',  temp:'13.9°C', humidity:'58% RH', network:'Bon',        lat:45.1838, lng:5.7385, substatus:[] },
+  { id:'ELAV-LTEM-UL-02616001000301', status:'ok',  date:'Mar 13, 2026 8:50 AM',  address:'Parc Paul Mistral, Grenoble',       lie:'0% LEL',  temp:'14.2°C', humidity:'62% RH', network:'Optimal',  lat:45.1848, lng:5.7360, substatus:[] },
+  { id:'ELAV-LTEM-UL-02616001000302', status:'alarm',   date:'Mar 13, 2026 6:15 AM',  address:'Av. Alsace-Lorraine, Grenoble',     lie:'31% LEL', temp:'22.5°C', humidity:'74% RH', network:'Critical',   lat:45.1825, lng:5.7405, substatus:[{label:'CH4 High Alarm',cls:'badge-gas-hi'},{label:'System Failure',cls:'badge-sys'}] },
+  { id:'ELAV-LTEM-UL-02616001000303', status:'warning', date:'Mar 13, 2026 3:40 AM',  address:'Bd du Maréchal Joffre, Grenoble',   lie:'6% LEL',  temp:'17.8°C', humidity:'69% RH', network:'Fair',      lat:45.1860, lng:5.7438, substatus:[{label:'Battery alarm',cls:'badge-battery'},{label:'Env. out of range',cls:'badge-env'}] },
+  { id:'ELAV-LTEM-UL-02616001000304', status:'offline', date:'Mar 11, 2026 9:00 PM',  address:'Rue Félix Viallet, Grenoble',       lie:'0% LEL',  temp:'—',      humidity:'—',      network:'Offline', lat:45.1815, lng:5.7350, substatus:[] },
+  { id:'ELAV-LTEM-UL-02616001000305', status:'ok',  date:'Mar 13, 2026 9:02 AM',  address:'Pl. de Verdun, Grenoble',           lie:'0% LEL',  temp:'13.9°C', humidity:'58% RH', network:'Good',        lat:45.1838, lng:5.7385, substatus:[] },
 ];
 
 /* ── INIT LEAFLET ── */
@@ -539,7 +539,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
 }).addTo(map);
 
-/* ── ZONE — polygone Leaflet natif, fixe sur la carte ── */
+/* ── ZONE ── */
 const ZONE_LATLNGS = [
   [45.2002, 5.6755],  // haut-gauche
   [45.1998, 5.6892],  // haut-droite
@@ -631,7 +631,7 @@ document.head.appendChild(s);
 /* ── BUILD MARKERS ── */
 const tooltip = document.getElementById('tooltip');
 const ttInner = document.getElementById('ttInner');
-const labels  = { alarm:'Alarme', warning:'Warning', online:'Connecté', offline:'Hors ligne' };
+const labels  = { alarm:'Alarme', warning:'Warning', online:'Operational', offline:'Offline' };
 const counts  = { alarm:0, warning:0, online:0, offline:0 };
 const markers = [];
 
